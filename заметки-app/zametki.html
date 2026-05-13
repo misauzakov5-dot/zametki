@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Продвинутый список дел</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        input[type="text"], select, input[type="date"] {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            flex: 1;
+        }
+        button {
+            padding: 10px 15px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .export-btn {
+            background: #2196F3;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            margin: 5px 0;
+            background: #f9f9f9;
+            border-radius: 4px;
+            transition: background 0.3s;
+        }
+        li.completed span {
+            text-decoration: line-through;
+            color: #888;
+        }
+        .task-content {
+            flex: 1;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .category-tag {
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 0.8em;
+            color: white;
+        }
+        .category-work { background: #f44336; }
+        .category-personal { background: #2196F3; }
+        .category-shopping { background: #4CAF50; }
+        .category-other { background: #9E9E9E; }
+        .due-date {
+            font-size: 0.9em;
+            color: #666;
+            margin-left: 10px;
+        }
+        .actions {
+            display: flex;
+            gap: 5px;
+        }
+        .edit, .delete {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .edit { background: #FF9800; color: white; }
+        .delete { background: #ff4444; color: white; }
+        .completed-btn { background: #8BC34A; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Мой список дел</h1>
+        
+        <div class="input-group">
+            <input type="text" id="taskInput" placeholder="Введите новую задачу...">
+            <select id="categorySelect">
+                <option value="work">Работа</option>
+                <option value="personal">Личное</option>
+                <option value="shopping">Покупки</option>
+                <option value="other">Другое</option>
+            </select>
+            <input type="date" id="dueDateInput">
+            <button onclick="addTask()">Добавить</button>
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <button class="export-btn" onclick="exportToCSV()">Экспорт в CSV</button>
+            <button class="export-btn" onclick="exportToTXT()">Экспорт в TXT</button>
+        </div>
+        
+        <ul id="taskList"></ul>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', loadTasks);
+
+        function addTask() {
+            const input = document.getElementById('taskInput');
+            const categorySelect = document.getElementById('categorySelect');
+            const dueDateInput = document.getElementById('dueDateInput');
+            
+            const taskText = input.value.trim();
+            const category = categorySelect.value;
+            const dueDate = dueDateInput.value;
+            
+            if (taskText === '') {
+                alert('Введите задачу!');
+                return;
+            }
+
+            const li = document.createElement('li');
+            li.innerHTML = `
+                <div class="task-content">
+                    <span>${taskText}</span>
+                    <span class="category-tag category-${category}">${getCategoryName(category)}</span>
+                    ${dueDate ? `<span class="due-date">Срок: ${formatDate(dueDate)}</span>` : ''}
+                </div>
+                <div class="actions">
+                    <button class="completed-btn" onclick="toggleCompleted(this)">Выполнено</button>
+                    <button class="edit" onclick="editTask(this)">Редактировать</button>
+                    <button class="delete" onclick="deleteTask(this)">Удалить</button>
+                </div>
+            `;
+            
+            document.getElementById('taskList').appendChild(li);
+            
+            input.value = '';
+            dueDateInput.value = '';
+            saveTasks();
+        }
+
+        function getCategoryName(value) {
+            const categories = {
+                'work': 'Работа',
+                'personal': 'Личное',
+                'shopping': 'Покупки',
+                'other': 'Другое'
+            };
+            return categories[value] || 'Другое';
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('ru-RU');
+        }
+
+        function toggleCompleted(button) {
+            const li = button.closest('li');
+            li.classList.toggle('completed');
+            saveTasks();
+        }
+
+        function editTask(button) {
+            const li = button.closest('li');
+            const span = li.querySelector('.task-content span');
+            const currentText = span.textContent;
+            
+            const newText = prompt('Редактировать задачу:', currentText);
+            if (newText !== null && newText.trim() !== '') {
+                span.textContent = newText.trim();
+                saveTasks();
+            }
+        }
+
+        function deleteTask(button) {
+            button.closest('li').remove();
+            saveTasks();
+        }
+
+        function saveTasks() {
+            const tasks = [];
+            document.querySelectorAll('#taskList li').forEach(li => {
+                const isCompleted = li.classList.contains('completed');
+                const taskText = li.querySelector('.task-content span').textContent;
+                const category = li.querySelector('.category-tag').classList[1].split('-')[1];
+                const dueDateElement = li.querySelector('.due-date');
+                const dueDate = dueDateElement ? dueDateElement.textContent.replace('Срок: ', '') : '';
+                
+                tasks.push({
+                    text: taskText,
+                    category: category,
+                    dueDate: dueDate,
+                    completed: isCompleted
+                });
+            });
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+        }
+
+        function loadTasks() {
+            const savedTasks = localStorage.getItem('tasks');
+            if (savedTasks) {
+                const tasks = JSON.parse(savedTasks);
+                tasks.forEach(task => {
+                    const li = document.createElement('li');
+            
+            if (task.completed) {
+                li.classList.add('completed');
+            }
+            
+            li.innerHTML = `
